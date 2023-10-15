@@ -9,6 +9,7 @@ from datetime import datetime
 class Packages:
     def __init__(self):
         self.package_times={}
+        self.now_ts=time.time()
         self.now=datetime.now()
 
     @staticmethod
@@ -16,8 +17,7 @@ class Packages:
         result=subprocess.run(command, stdout=subprocess.PIPE)
         return result.stdout.splitlines()
 
-    @staticmethod
-    def _fetch_package_last_usage(package: str) -> int:
+    def _fetch_package_last_usage(self, package: str) -> int:
         versions_and_files=Packages._run_command(["pacman", "-Ql", package])
         files=[entry.decode("utf-8").split(maxsplit=1)[1] for entry in versions_and_files]
 
@@ -36,7 +36,7 @@ class Packages:
 
         if len(atimes) == 0:
             print(f"Warning: could not access files from {package}")
-            atimes.append(time.time())
+            atimes.append(self.now_ts)
 
         latest_atime=max(atimes)
 
@@ -57,7 +57,7 @@ class Packages:
     def _get_package_last_usage(self, package: str) -> int:
         atime=self.package_times.get(package)
         if (atime is None):
-            atime=Packages._fetch_package_last_usage(package)
+            atime=self._fetch_package_last_usage(package)
             self.package_times[package]=atime
         return atime
 
