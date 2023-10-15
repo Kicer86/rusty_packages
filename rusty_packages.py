@@ -64,11 +64,18 @@ class Packages:
     def process(self):
         packages=Packages._fetch_all_packages()
 
+        rusty_packages=[]
         for package in packages:
             atime=self._get_package_last_usage(package)
-            stale=self._calculate_stale_time(atime)
+            days=self._calculate_stale_time(atime)
 
-            print(f"Package {package} not used for {stale} days")
+            if days > 30:
+                rusty_packages.append((days, package))
+
+        sorted_packages=sorted(rusty_packages)
+        for package in sorted_packages:
+            print(f"package {package[1]} not used for {package[0]} days")
+
 
 
 p=Packages()
