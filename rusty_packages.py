@@ -48,7 +48,7 @@ class Packages:
         packages=[entry.decode("utf-8").split(maxsplit=1)[0] for entry in packages_and_versions]
         return packages
 
-    def _calculate_stale_time(self, atime):
+    def _calculate_days_time(self, atime):
         timestamp_datetime=datetime.fromtimestamp(atime)
         time_difference=self.now-timestamp_datetime
         difference_in_days = time_difference.days
@@ -67,7 +67,7 @@ class Packages:
         rusty_packages=[]
         for package in packages:
             atime=self._get_package_last_usage(package)
-            days=self._calculate_stale_time(atime)
+            days=self._calculate_days_time(atime)
 
             if days > 30:
                 rusty_packages.append((days, package))
