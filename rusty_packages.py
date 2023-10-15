@@ -1,5 +1,6 @@
 
 import os
+import progressbar
 import stat
 import subprocess
 import time
@@ -82,7 +83,8 @@ class Packages:
         packages=Packages._fetch_all_packages()
 
         rusty_packages=[]
-        for package in packages:
+        for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
+            package=packages[i]
             atime=self._get_package_last_usage(package)
             required_by=Packages._fetch_required_by(package)
 
