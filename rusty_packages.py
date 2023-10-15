@@ -14,7 +14,7 @@ class Packages:
 
     @staticmethod
     def _run_command(command: [str]) -> [str]:
-        result=subprocess.run(command, stdout=subprocess.PIPE)
+        result=subprocess.run(command, stdout=subprocess.PIPE, env={"LC_ALL": "C"})
         return result.stdout.splitlines()
 
     def _fetch_package_last_usage(self, package: str) -> int:
@@ -48,6 +48,23 @@ class Packages:
         packages=[entry.decode("utf-8").split(maxsplit=1)[0] for entry in packages_and_versions]
         return packages
 
+    @staticmethod
+    def _fetch_required_by(package: str) -> [str]:
+        required_by=[]
+        package_info=Packages()._run_command(["pacman", "-Qii", package])
+        for info in package_info:
+            info=info.decode("utf-8")
+            if info.startswith("Required By"):
+                packages=info.split(":")[1]
+                packages=packages.strip()
+
+                if packages != "None":
+                    required_by=packages.split()
+                break
+
+        return required_by
+
+
     def _calculate_days_time(self, atime):
         timestamp_datetime=datetime.fromtimestamp(atime)
         time_difference=self.now-timestamp_datetime
@@ -67,6 +84,12 @@ class Packages:
         rusty_packages=[]
         for package in packages:
             atime=self._get_package_last_usage(package)
+            required_by=Packages._fetch_required_by(package)
+
+            for required in required_by:
+                ratime=self._get_package_last_usage(required)
+                atime=max(atime, ratime)
+
             days=self._calculate_days_time(atime)
 
             if days > 30:
@@ -74,7 +97,7 @@ class Packages:
 
         sorted_packages=sorted(rusty_packages)
         for package in sorted_packages:
-            print(f"package {package[1]} not used for {package[0]} days")
+            print(f"package {package[1]} not used for {package[0]} days.")
 
 
 
