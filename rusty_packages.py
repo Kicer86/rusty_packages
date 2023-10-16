@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 
 
-class Packages:
+class RustyPackages:
     def __init__(self):
         self.package_times={}
         self.now_ts=time.time()
@@ -19,7 +19,7 @@ class Packages:
         return result.stdout.splitlines()
 
     def _fetch_package_last_usage(self, package: str) -> int:
-        versions_and_files=Packages._run_command(["pacman", "-Ql", package])
+        versions_and_files=RustyPackages._run_command(["pacman", "-Ql", package])
         files=[entry.decode("utf-8").split(maxsplit=1)[1] for entry in versions_and_files]
 
         atimes=[]
@@ -45,14 +45,14 @@ class Packages:
 
     @staticmethod
     def _fetch_all_packages() -> [str]:
-        packages_and_versions=Packages._run_command(["pacman", "-Q"])
+        packages_and_versions=RustyPackages._run_command(["pacman", "-Q"])
         packages=[entry.decode("utf-8").split(maxsplit=1)[0] for entry in packages_and_versions]
         return packages
 
     @staticmethod
     def _fetch_required_by(package: str) -> [str]:
         required_by=[]
-        package_info=Packages()._run_command(["pacman", "-Qii", package])
+        package_info=RustyPackages()._run_command(["pacman", "-Qii", package])
         for info in package_info:
             info=info.decode("utf-8")
             if info.startswith("Required By"):
@@ -64,7 +64,6 @@ class Packages:
                 break
 
         return required_by
-
 
     def _calculate_days_time(self, atime):
         timestamp_datetime=datetime.fromtimestamp(atime)
@@ -80,13 +79,13 @@ class Packages:
         return atime
 
     def process(self):
-        packages=Packages._fetch_all_packages()
+        packages=RustyPackages._fetch_all_packages()
 
         rusty_packages=[]
         for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
             package=packages[i]
             atime=self._get_package_last_usage(package)
-            required_by=Packages._fetch_required_by(package)
+            required_by=RustyPackages._fetch_required_by(package)
 
             for required in required_by:
                 ratime=self._get_package_last_usage(required)
@@ -102,6 +101,5 @@ class Packages:
             print(f"package {package[1]} not used for {package[0]} days.")
 
 
-
-p=Packages()
+p=RustyPackages()
 p.process()
