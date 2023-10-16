@@ -78,18 +78,20 @@ class RustyPackages:
             self.package_times[package]=atime
         return atime
 
-    def process(self):
+    def process(self, check_depending_packages=False):
         packages=RustyPackages._fetch_all_packages()
 
         rusty_packages=[]
         for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
             package=packages[i]
             atime=self._get_package_last_usage(package)
-            required_by=RustyPackages._fetch_required_by(package)
 
-            for required in required_by:
-                ratime=self._get_package_last_usage(required)
-                atime=max(atime, ratime)
+            if check_depending_packages:
+                required_by=RustyPackages._fetch_required_by(package)
+
+                for required in required_by:
+                    ratime=self._get_package_last_usage(required)
+                    atime=max(atime, ratime)
 
             days=self._calculate_days_time(atime)
 
