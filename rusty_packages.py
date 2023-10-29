@@ -56,9 +56,9 @@ class RustyPackages:
 
             if file_stat and stat.S_ISREG(file_stat.st_mode):
                 atime=int(file_stat.st_atime)
-                mtime=int(file_stat.st_mtime)
+                ctime=int(file_stat.st_ctime)
 
-                if atime > mtime:
+                if atime > ctime:
                     used = True
                     break
 
