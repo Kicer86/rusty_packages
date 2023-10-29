@@ -147,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument("--since-upgrade", "-u",
                         action='store_true',
                         default=False,
-                        help="Look for packages not used since last upgrade.")
+                        help="Show packages not used since last upgrade only.")
 
     args = parser.parse_args(sys.argv[1:])
 
