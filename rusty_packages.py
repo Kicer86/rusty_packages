@@ -97,8 +97,7 @@ class RustyPackages:
         package_atime={}
 
         # calcualate atime for each package
-        #for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
-        for i in range(len(packages)):
+        for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
             package=packages[i]
 
             if since_upgrade and RustyPackages._was_package_used_after_upgrade(package):
@@ -129,7 +128,7 @@ class RustyPackages:
             atime=package_atime[package]
             days=self._calculate_days_time(atime)
 
-            if days > 5:
+            if days > 30:
                 rusty_packages.append((days, package))
 
         # print them out
