@@ -142,7 +142,7 @@ if __name__ == '__main__':
     parser.add_argument("--follow-deps", "-d",
                         action='store_true',
                         default=False,
-                        help="When calculating package's last use time, take into consideration last use of packages depending on it.")
+                        help="When calculating package's last use time, take into consideration last use of packages depending on it also.")
 
     parser.add_argument("--since-upgrade", "-u",
                         action='store_true',
