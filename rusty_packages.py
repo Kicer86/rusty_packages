@@ -165,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument("--follow-deps", "-d",
                         action='store_true',
                         default=False,
-                        help="When calculating package's last use time, take into consideration last use of packages depending on it also.")
+                        help="When calculating package's last use time, take into consideration last use of packages depending on it also. Not allowed with --last-upgraded")
 
     parser.add_argument("--since-upgrade", "-u",
                         action='store_true',
@@ -191,6 +191,10 @@ if __name__ == '__main__':
 
     if (args.since_upgrade and args.last_upgraded):
         print("--since-upgrade and --last-upgraded are mutually exclusive")
+        exit(1)
+
+    if (args.follow_deps and args.last_upgraded):
+        print("--follow-deps and --last-upgraded are mutually exclusive")
         exit(1)
 
     p=RustyPackages()
