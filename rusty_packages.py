@@ -29,22 +29,51 @@ class RustyPackages:
     def _fetch_required_by(package: str) -> [str]:
         return RustyPackages._run_command(["pactree", "-rl", package])[1:]
 
-    def _fetch_package_last_usage(self, package: str) -> int:
+    @staticmethod
+    def _fetch_package_files(package: str) -> [str]:
         versions_and_files=RustyPackages._run_command(["pacman", "-Ql", package])
         files=[entry.split(maxsplit=1)[1] for entry in versions_and_files]
+        return files
+
+    @staticmethod
+    def _fetch_file_properties(file: str, package: str) -> stat:
+        file_stat=None
+        try:
+            file_stat=os.stat(file)
+        except PermissionError:
+            pass
+        except FileNotFoundError:
+            print(f"Warning: missing file: {file} from {package}")
+        return file_stat
+
+    @staticmethod
+    def _was_package_used_after_upgrade(package: str) -> int:
+        files=RustyPackages._fetch_package_files(package)
+
+        used=False
+        for file in files:
+            file_stat=RustyPackages._fetch_file_properties(file, package)
+
+            if file_stat and stat.S_ISREG(file_stat.st_mode):
+                atime=int(file_stat.st_atime)
+                ctime=int(file_stat.st_ctime)
+
+                if atime > ctime:
+                    used = True
+                    break
+
+        return used
+
+    def _fetch_package_last_usage(self, package: str) -> int:
+        files=RustyPackages._fetch_package_files(package)
 
         atimes=[]
         for file in files:
-            try:
-                file_stat=os.stat(file)
-            except PermissionError:
-                pass
-            except FileNotFoundError:
-                print(f"Warning: missing file: {file} from {package}")
-            else:
-                if stat.S_ISREG(file_stat.st_mode):
-                    atime=int(file_stat.st_atime)
-                    atimes.append(atime)
+            file_stat=RustyPackages._fetch_file_properties(file, package)
+
+            if file_stat and stat.S_ISREG(file_stat.st_mode):
+                atime=int(file_stat.st_atime)
+                atimes.append(atime)
 
         if len(atimes) == 0:
             print(f"Warning: could not access files from {package}")
@@ -54,13 +83,14 @@ class RustyPackages:
 
         return latest_atime
 
+
     def _calculate_days_time(self, atime):
         timestamp_datetime=datetime.fromtimestamp(atime)
         time_difference=self.now-timestamp_datetime
         difference_in_days = time_difference.days
         return difference_in_days
 
-    def process(self, check_depending_packages=False):
+    def process(self, check_depending_packages=False, since_upgrade=False):
         packages=RustyPackages._fetch_all_packages()
 
         required_by={}
@@ -68,9 +98,13 @@ class RustyPackages:
 
         # calcualate atime for each package
         for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
-        #for i in range(len(packages)):
             package=packages[i]
-            atime=self._fetch_package_last_usage(package)
+
+            if since_upgrade and RustyPackages._was_package_used_after_upgrade(package):
+                atime=self.now_ts
+            else:
+                atime=self._fetch_package_last_usage(package)
+
             package_atime[package]=atime
             if check_depending_packages:
                 dependent_packages=RustyPackages._fetch_required_by(package)
@@ -108,9 +142,14 @@ if __name__ == '__main__':
     parser.add_argument("--follow-deps", "-d",
                         action='store_true',
                         default=False,
-                        help="When calculating package's last use time, take into consideration last use of packages depending on it.")
+                        help="When calculating package's last use time, take into consideration last use of packages depending on it also.")
+
+    parser.add_argument("--since-upgrade", "-u",
+                        action='store_true',
+                        default=False,
+                        help="Show packages not used since last upgrade only.")
 
     args = parser.parse_args(sys.argv[1:])
 
     p=RustyPackages()
-    p.process(check_depending_packages=args.follow_deps)
+    p.process(check_depending_packages=args.follow_deps, since_upgrade=args.since_upgrade)
