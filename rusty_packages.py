@@ -90,7 +90,7 @@ class RustyPackages:
         difference_in_days = time_difference.days
         return difference_in_days
 
-    def process(self, check_depending_packages=False, since_upgrade=False):
+    def process(self, check_depending_packages=False, since_upgrade=False, time=30):
         packages=RustyPackages._fetch_all_packages()
 
         required_by={}
@@ -128,7 +128,7 @@ class RustyPackages:
             atime=package_atime[package]
             days=self._calculate_days_time(atime)
 
-            if days > 30:
+            if days > time:
                 rusty_packages.append((days, package))
 
         # print them out
@@ -138,7 +138,7 @@ class RustyPackages:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Look for unused packages')
+    parser = argparse.ArgumentParser(description='Look for unused packages.')
     parser.add_argument("--follow-deps", "-d",
                         action='store_true',
                         default=False,
@@ -149,7 +149,17 @@ if __name__ == '__main__':
                         default=False,
                         help="Show packages not used since last upgrade only.")
 
+    parser.add_argument("--time", "-t",
+                        action='store',
+                        default=30,
+                        help="Show packages not used for more than specified number of days. Default is 30.")
+
     args = parser.parse_args(sys.argv[1:])
+    rusty_time=int(args.time)
+
+    if rusty_time < 0:
+        print("--time needs to be 0 at least")
+        exit(1)
 
     p=RustyPackages()
-    p.process(check_depending_packages=args.follow_deps, since_upgrade=args.since_upgrade)
+    p.process(check_depending_packages=args.follow_deps, since_upgrade=args.since_upgrade, time=rusty_time)
