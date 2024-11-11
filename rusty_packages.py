@@ -1,12 +1,14 @@
 
 import argparse
+import logging
 import os
-import progressbar
 import stat
 import subprocess
 import sys
 import time
+import tqdm
 from datetime import datetime
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 
 class RustyPackages:
@@ -43,7 +45,7 @@ class RustyPackages:
         except PermissionError:
             pass
         except FileNotFoundError:
-            print(f"Warning: missing file: {file} from {package}")
+            logging.warning(f"Warning: missing file: {file} from {package}")
         return file_stat
 
     @staticmethod
@@ -76,7 +78,7 @@ class RustyPackages:
                 atimes.append(atime)
 
         if len(atimes) == 0:
-            print(f"Warning: could not access files from {package}")
+            logging.warning(f"Warning: could not access files from {package}")
             atimes.append(self.now_ts)
 
         latest_atime=max(atimes)
@@ -95,7 +97,7 @@ class RustyPackages:
                 ctimes.append(ctime)
 
         if len(ctimes) == 0:
-            print(f"Warning: could not access files from {package}")
+            logging.warning(f"Warning: could not access files from {package}")
             ctimes.append(self.now_ts)
 
         latest_ctime=max(ctimes)
@@ -115,20 +117,19 @@ class RustyPackages:
         package_time={}
 
         # calcualate atime/ctime for each package
-        for i in progressbar.progressbar(range(len(packages)), redirect_stdout=True):
-            package=packages[i]
+        with logging_redirect_tqdm():
+            for package in tqdm.tqdm(packages, leave=False, unit="package"):
+                if use_ctime:
+                    time=self._fetch_package_last_update(package)
+                elif since_upgrade and RustyPackages._was_package_used_after_upgrade(package):
+                    time=self.now_ts
+                else:
+                    time=self._fetch_package_last_usage(package)
 
-            if use_ctime:
-                time=self._fetch_package_last_update(package)
-            elif since_upgrade and RustyPackages._was_package_used_after_upgrade(package):
-                time=self.now_ts
-            else:
-                time=self._fetch_package_last_usage(package)
-
-            package_time[package]=time
-            if check_depending_packages:
-                dependent_packages=RustyPackages._fetch_required_by(package)
-                required_by[package]=dependent_packages
+                package_time[package]=time
+                if check_depending_packages:
+                    dependent_packages=RustyPackages._fetch_required_by(package)
+                    required_by[package]=dependent_packages
 
         # include dependencies in atime
         if check_depending_packages:
@@ -153,14 +154,18 @@ class RustyPackages:
 
         # print them out
         sorted_packages=sorted(rusty_packages)
+        logging.info(f"Found {len(sorted_packages)} rusty packages")
+
         for package in sorted_packages:
             if use_ctime:
-                print(f"package {package[1]} not upgraded for {package[0]} days.")
+                logging.info(f"package {package[1]} not upgraded for {package[0]} days.")
             else:
-                print(f"package {package[1]} not used for {package[0]} days.")
+                logging.info(f"package {package[1]} not used for {package[0]} days.")
+
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='', level=logging.INFO)
     parser = argparse.ArgumentParser(description='Look for unused packages.')
     parser.add_argument("--follow-deps", "-d",
                         action='store_true',
@@ -186,15 +191,15 @@ if __name__ == '__main__':
     rusty_time=int(args.time)
 
     if rusty_time < 0:
-        print("--time needs to be 0 at least")
+        logging.error("--time needs to be 0 at least")
         exit(1)
 
     if (args.since_upgrade and args.last_upgraded):
-        print("--since-upgrade and --last-upgraded are mutually exclusive")
+        logging.error("--since-upgrade and --last-upgraded are mutually exclusive")
         exit(1)
 
     if (args.follow_deps and args.last_upgraded):
-        print("--follow-deps and --last-upgraded are mutually exclusive")
+        logging.error("--follow-deps and --last-upgraded are mutually exclusive")
         exit(1)
 
     p=RustyPackages()
